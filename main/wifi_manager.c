@@ -1,6 +1,7 @@
 #include "wifi_manager.h"
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "esp_wifi.h"
 #include "esp_event.h"
@@ -16,6 +17,7 @@
 #include "freertos/task.h"
 
 #include "driver/gpio.h"
+#include "oled_display.h"
 
 /************************************************************
                         DEFINES
@@ -37,12 +39,16 @@ static bool s_is_provisioning = false;
 
 static int s_retry_count = 0;
 
+static int s_prov_error_timer = 0;
+
 /************************************************************
                         LED TASK
 ************************************************************/
 
 static void led_task(void *pv)
 {
+    bool blink_state = false;
+
     while (1)
     {
         /**************************************************
@@ -67,23 +73,60 @@ static void led_task(void *pv)
 
         else if (s_is_provisioning)
         {
-            gpio_set_level(
-                WIFI_LED_PIN,
-                0
-            );
+            if (s_prov_error_timer > 0)
+            {
+                // Show the specific error message on display
+                oled_show_message(
+                    "Wrong Password",
+                    "Restarting..."
+                );
 
-            vTaskDelay(
-                pdMS_TO_TICKS(150)
-            );
+                gpio_set_level(
+                    WIFI_LED_PIN,
+                    0
+                ); 
+                
+                s_prov_error_timer--;
 
-            gpio_set_level(
-                WIFI_LED_PIN,
-                1
-            );
+                vTaskDelay(
+                    pdMS_TO_TICKS(500)
+                );
 
-            vTaskDelay(
-                pdMS_TO_TICKS(150)
-            );
+                // When the timer hits 0, trigger the full system restart!
+                if (s_prov_error_timer == 0) 
+                {
+                    ESP_LOGE(TAG, "Rebooting to fix SoftAP visibility...");
+                    wifi_manager_reset_provisioning();
+                }
+            }
+            else
+            {
+                blink_state = !blink_state;
+
+                gpio_set_level(
+                    WIFI_LED_PIN,
+                    blink_state ? 1 : 0
+                );
+
+                if (blink_state) 
+                {
+                    oled_show_message(
+                        "WiFi Setup Mode",
+                        "Connect Using App"
+                    );
+                } 
+                else 
+                {
+                    oled_show_message(
+                        "WiFi Setup Mode",
+                        "- Waiting -"
+                    );
+                }
+                
+                vTaskDelay(
+                    pdMS_TO_TICKS(500)
+                );
+            }
         }
 
         /**************************************************
@@ -111,6 +154,7 @@ static void led_task(void *pv)
 static void start_provisioning(void)
 {
     s_is_provisioning = true;
+    s_prov_error_timer = 0;
 
     wifi_prov_security_t security =
         WIFI_PROV_SECURITY_1;
@@ -119,7 +163,7 @@ static void start_provisioning(void)
         "abcd1234";
 
     const char *service_name =
-        "TEC_JACKET_SETUP";
+        "COOLING_JACKET";
 
     const char *service_key =
         "12345678";
@@ -197,6 +241,19 @@ static void event_handler(
 
                 s_retry_count++;
 
+                char retry_msg[32];
+                sprintf(
+                    retry_msg, 
+                    "Retrying... %d/%d", 
+                    s_retry_count, 
+                    MAX_WIFI_RETRY
+                );
+
+                oled_show_message(
+                    "WiFi Connection",
+                    retry_msg
+                );
+
                 ESP_LOGW(
                     TAG,
                     "Reconnect Retry %d/%d",
@@ -224,11 +281,24 @@ static void event_handler(
                         "WiFi Failed"
                     );
 
+                    oled_show_message(
+                        "WiFi Failed",
+                        "Resetting..."
+                    );
+
+                    vTaskDelay(
+                        pdMS_TO_TICKS(2500)
+                    );
+
                     ESP_LOGE(
                         TAG,
                         "Reset Provisioning"
                     );
 
+                    // Deep clean NVS so it successfully boots to provision mode
+                    esp_wifi_disconnect();
+                    esp_wifi_stop();
+                    esp_wifi_restore();
                     wifi_prov_mgr_reset_provisioning();
 
                     vTaskDelay(
@@ -257,6 +327,17 @@ static void event_handler(
         s_is_provisioning = false;
 
         s_retry_count = 0;
+        
+        s_prov_error_timer = 0;
+
+        oled_show_message(
+            "WiFi Connected",
+            "Setup Complete"
+        );
+
+        vTaskDelay(
+            pdMS_TO_TICKS(1500)
+        );
 
         ESP_LOGI(
             TAG,
@@ -305,8 +386,11 @@ static void event_handler(
 
                 ESP_LOGE(
                     TAG,
-                    "Provisioning Failed"
+                    "Provisioning Failed - Wrong Password"
                 );
+
+                // Triggers the LED task to show the message for 3 seconds, THEN automatically restart!
+                s_prov_error_timer = 6;
 
                 break;
 
@@ -536,6 +620,9 @@ void wifi_manager_reset_provisioning(void)
         "Factory Reset WiFi"
     );
 
+    esp_wifi_disconnect();
+    esp_wifi_stop();
+    esp_wifi_restore();
     wifi_prov_mgr_reset_provisioning();
 
     vTaskDelay(

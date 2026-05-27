@@ -16,6 +16,15 @@ void oled_display_update(
     bool wifi_connected
 );
 
+/************************************************
+                OLED MESSAGE
+************************************************/
+
+void oled_show_message(
+    const char *line1,
+    const char *line2
+);
+
 #ifdef __cplusplus
 }
 #endif

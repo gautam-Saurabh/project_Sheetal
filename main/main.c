@@ -1,5 +1,6 @@
 #include "main.h"
 #include "config.h"
+#include "oled_display.h"
 
 #include "wifi_manager.h"
 
@@ -7,7 +8,7 @@
 #include "tec_fan_controller.h"
 #include "pumpcontroller.h"
 #include "button_handler.h"
-#include "oled_display.h"
+
 #include "battery_monitor.h"
 #include "thingspeakhandler.h"
 
@@ -15,10 +16,16 @@
 #include "freertos/task.h"
 
 #include "esp_log.h"
-
 #include "driver/gpio.h"
 
 static const char *TAG = "MAIN";
+
+/************************************************************
+                    EXTERNAL VARIABLES
+************************************************************/
+// This tells the compiler to look for the real values in your sensor files
+extern float currentTemp;
+extern int setTemp;
 
 /************************************************************
                     BOOT BUTTON
@@ -56,14 +63,27 @@ void app_main(void)
     gpio_config(&io_conf);
 
     /********************************************************
-                        WIFI INIT
-    ********************************************************/
-
-    wifi_manager_init();
-
-    /********************************************************
                             INIT
     ********************************************************/
+
+    // 1. Initialize OLED FIRST so the I2C bus is ready!
+    oled_display_init();
+
+    /******************************************************
+                    BOOT ANIMATION
+    ******************************************************/
+
+    oled_show_message(
+        "Cooling Jacket",
+        "Starting..."
+    );
+
+    vTaskDelay(
+        pdMS_TO_TICKS(1000)
+    );
+
+    // 2. NOW initialize WiFi (which can safely use the OLED)
+    wifi_manager_init();
 
     battery_monitor_init();
 
@@ -75,11 +95,36 @@ void app_main(void)
 
     pump_controller_init();
 
-    oled_display_init();
+    /******************************************************
+                    INITIALIZING
+    ******************************************************/
+
+    for (int i = 0; i < 3; i++)
+    {
+        oled_show_message(
+            "COOLING Jacket",
+
+            i == 0 ? "Initializing." :
+            i == 1 ? "Initializing.." :
+                     "Initializing..."
+        );
+
+        vTaskDelay(
+            pdMS_TO_TICKS(500)
+        );
+    }
 
     thingspeak_handler_init();
 
     ESP_LOGI(TAG, "All modules initialized");
+
+    /********************************************************
+                    LOOP VARIABLES
+    ********************************************************/
+    
+    uint32_t boot_press_start_time = 0;
+    bool is_boot_pressed = false;
+    bool reset_triggered = false;
 
     /********************************************************
                             LOOP
@@ -88,40 +133,69 @@ void app_main(void)
     while (1)
     {
         /****************************************************
-                    RESET PROVISIONING
+                    RESET PROVISIONING (TIME-BASED)
         ****************************************************/
 
         if (gpio_get_level(BOOT_BUTTON) == 0)
         {
-            vTaskDelay(
-                pdMS_TO_TICKS(3000)
-            );
-
-            if (gpio_get_level(BOOT_BUTTON) == 0)
+            if (!is_boot_pressed)
             {
-                ESP_LOGW(
-                    TAG,
-                    "Reset WiFi Provisioning"
-                );
-
-                wifi_manager_reset_provisioning();
+                is_boot_pressed = true;
+                boot_press_start_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
+                reset_triggered = false;
             }
+            else if (!reset_triggered)
+            {
+                uint32_t hold_duration = (xTaskGetTickCount() * portTICK_PERIOD_MS) - boot_press_start_time;
+
+                if (hold_duration >= 500 && hold_duration < 3000) 
+                {
+                    oled_show_message(
+                        "Keep Holding",
+                        "To Reset WiFi"
+                    );
+                }
+                else if (hold_duration >= 3000) // Held for 3 real seconds
+                {
+                    reset_triggered = true; // Stop it from triggering over and over
+                    
+                    ESP_LOGW(
+                        TAG,
+                        "Reset WiFi Provisioning"
+                    );
+
+                    oled_show_message(
+                        "Resetting WiFi",
+                        "Entering Setup"
+                    );
+
+                    vTaskDelay(
+                        pdMS_TO_TICKS(2000)
+                    );
+
+                    wifi_manager_reset_provisioning();
+                }
+            }
+        }
+        else
+        {
+            is_boot_pressed = false; 
         }
 
         /****************************************************
-                    TEMPERATURE
+                        TEMPERATURE
         ****************************************************/
 
         temperature_monitoring_update();
 
         /****************************************************
-                        BUTTONS
+                            BUTTONS
         ****************************************************/
 
         button_handler_update();
 
         /****************************************************
-                    TEC + FAN
+                        TEC + FAN
         ****************************************************/
 
         tec_fan_controller_update(
@@ -129,38 +203,42 @@ void app_main(void)
         );
 
         /****************************************************
-                        BATTERY
+                            BATTERY
         ****************************************************/
 
         float battery_percent =
             battery_monitor_get_percent();
 
         /****************************************************
-                        WIFI
+                            WIFI
         ****************************************************/
 
         bool wifi_connected =
             wifi_manager_is_connected();
 
         /****************************************************
-                        OLED
+                            OLED
         ****************************************************/
 
-        oled_display_update(
-            currentTemp,
-            setTemp,
-            battery_percent,
-            wifi_connected
-        );
+        // Only update standard display if button is NOT held for more than 500ms
+        if (!is_boot_pressed || ((xTaskGetTickCount() * portTICK_PERIOD_MS) - boot_press_start_time) < 500)
+        {
+            oled_display_update(
+                currentTemp,
+                setTemp,
+                battery_percent,
+                wifi_connected
+            );
+        }
 
         /****************************************************
-                    THINGSPEAK
+                        THINGSPEAK
         ****************************************************/
 
         thingspeak_handler_update();
 
         /****************************************************
-                        DEBUG
+                            DEBUG
         ****************************************************/
 
         ESP_LOGI(

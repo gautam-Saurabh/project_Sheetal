@@ -305,3 +305,47 @@ void oled_display_update(
 
     u8g2_SendBuffer(&u8g2);
 }
+/************************************************
+                OLED MESSAGE
+************************************************/
+
+void oled_show_message(
+    const char *line1,
+    const char *line2
+)
+{
+    u8g2_ClearBuffer(&u8g2);
+
+    u8g2_SetFont(
+        &u8g2,
+        u8g2_font_6x12_tf
+    );
+
+    int w1 =
+        u8g2_GetStrWidth(
+            &u8g2,
+            line1
+        );
+
+    int w2 =
+        u8g2_GetStrWidth(
+            &u8g2,
+            line2
+        );
+
+    u8g2_DrawStr(
+        &u8g2,
+        (128 - w1) / 2,
+        28,
+        line1
+    );
+
+    u8g2_DrawStr(
+        &u8g2,
+        (128 - w2) / 2,
+        48,
+        line2
+    );
+
+    u8g2_SendBuffer(&u8g2);
+}
