@@ -4,6 +4,8 @@
 #include "onewire_bus.h"
 #include "ds18b20.h"
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,9 +14,15 @@ extern "C" {
                     GLOBAL TEMPERATURES
 ************************************************************/
 
+// Main control sensor
+
 extern float currentTemp;
 
+// Secondary sensor
+
 extern float sensor2Temp;
+
+// Third sensor
 
 extern float sensor3Temp;
 
@@ -25,6 +33,12 @@ extern float sensor3Temp;
 void temperature_monitoring_init(void);
 
 void temperature_monitoring_update(void);
+
+/************************************************************
+                TEMPERATURE STATUS
+************************************************************/
+
+bool temperature_monitoring_is_valid(void);
 
 #ifdef __cplusplus
 }

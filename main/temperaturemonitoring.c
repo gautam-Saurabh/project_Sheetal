@@ -4,6 +4,11 @@
 #include "esp_log.h"
 #include "esp_err.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+#include <math.h>
+
 static const char *TAG = "TEMP";
 
 /************************************************************
@@ -33,21 +38,29 @@ float sensor2Temp = 0.0f;
 float sensor3Temp = 0.0f;
 
 /************************************************************
+                TEMPERATURE VALID FLAG
+************************************************************/
+
+static bool s_temp_valid = false;
+
+/************************************************************
                     INIT
 ************************************************************/
 
 void temperature_monitoring_init(void)
 {
-    onewire_bus_config_t bus_config = {
-        .bus_gpio_num = TEMP1_PIN,
-    };
-
     onewire_bus_rmt_config_t rmt_config = {
+
         .max_rx_bytes = 10,
     };
 
+    onewire_bus_config_t bus_config = {
+
+        .bus_gpio_num = TEMP1_PIN,
+    };
+
     /******************************************************
-                    SENSOR 1 BUS
+                    SENSOR 1
     ******************************************************/
 
     ESP_ERROR_CHECK(
@@ -59,10 +72,11 @@ void temperature_monitoring_init(void)
     );
 
     /******************************************************
-                    SENSOR 2 BUS
+                    SENSOR 2
     ******************************************************/
 
-    bus_config.bus_gpio_num = TEMP2_PIN;
+    bus_config.bus_gpio_num =
+        TEMP2_PIN;
 
     ESP_ERROR_CHECK(
         onewire_new_bus_rmt(
@@ -73,10 +87,11 @@ void temperature_monitoring_init(void)
     );
 
     /******************************************************
-                    SENSOR 3 BUS
+                    SENSOR 3
     ******************************************************/
 
-    bus_config.bus_gpio_num = TEMP3_PIN;
+    bus_config.bus_gpio_num =
+        TEMP3_PIN;
 
     ESP_ERROR_CHECK(
         onewire_new_bus_rmt(
@@ -87,7 +102,7 @@ void temperature_monitoring_init(void)
     );
 
     /******************************************************
-                    DS18B20 CONFIG
+                    SENSOR CONFIG
     ******************************************************/
 
     ds18b20_config_t ds_cfg = {};
@@ -135,7 +150,39 @@ void temperature_monitoring_init(void)
         DS18B20_RESOLUTION_12B
     );
 
-    ESP_LOGI(TAG, "DS18B20 sensors initialized");
+    ESP_LOGI(
+        TAG,
+        "DS18B20 Initialized"
+    );
+}
+
+/************************************************************
+                VALID TEMP CHECK
+************************************************************/
+
+static bool is_valid_temp(float t)
+{
+    if (isnan(t))
+    {
+        return false;
+    }
+
+    if (t <= -100.0f)
+    {
+        return false;
+    }
+
+    if (t >= 100.0f)
+    {
+        return false;
+    }
+
+    if (t == 85.0f)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 /************************************************************
@@ -144,15 +191,45 @@ void temperature_monitoring_init(void)
 
 void temperature_monitoring_update(void)
 {
+    static uint32_t last_update = 0;
+
+    uint32_t now =
+        esp_log_timestamp();
+
+    /******************************************************
+                UPDATE EVERY 1 SECOND
+    ******************************************************/
+
+    if ((now - last_update) < 1000)
+    {
+        return;
+    }
+
+    last_update = now;
+
     /******************************************************
                 START CONVERSION
     ******************************************************/
 
-    ds18b20_trigger_temperature_conversion(sensor1);
+    ds18b20_trigger_temperature_conversion(
+        sensor1
+    );
 
-    ds18b20_trigger_temperature_conversion(sensor2);
+    ds18b20_trigger_temperature_conversion(
+        sensor2
+    );
 
-    ds18b20_trigger_temperature_conversion(sensor3);
+    ds18b20_trigger_temperature_conversion(
+        sensor3
+    );
+
+    /******************************************************
+                WAIT FOR CONVERSION
+    ******************************************************/
+
+    vTaskDelay(
+        pdMS_TO_TICKS(800)
+    );
 
     /******************************************************
                 READ TEMPERATURES
@@ -162,34 +239,76 @@ void temperature_monitoring_update(void)
     float t2 = 0.0f;
     float t3 = 0.0f;
 
-    ds18b20_get_temperature(sensor1, &t1);
+    esp_err_t err1 =
+        ds18b20_get_temperature(
+            sensor1,
+            &t1
+        );
 
-    ds18b20_get_temperature(sensor2, &t2);
+    esp_err_t err2 =
+        ds18b20_get_temperature(
+            sensor2,
+            &t2
+        );
 
-    ds18b20_get_temperature(sensor3, &t3);
+    esp_err_t err3 =
+        ds18b20_get_temperature(
+            sensor3,
+            &t3
+        );
 
     /******************************************************
-                VALIDITY CHECK
+                VALIDATION
     ******************************************************/
 
-    if (t1 != -127.0f)
+    bool valid1 =
+        (err1 == ESP_OK) &&
+        is_valid_temp(t1);
+
+    bool valid2 =
+        (err2 == ESP_OK) &&
+        is_valid_temp(t2);
+
+    bool valid3 =
+        (err3 == ESP_OK) &&
+        is_valid_temp(t3);
+
+    if (valid1)
+    {
         currentTemp = t1;
+    }
 
-    if (t2 != -127.0f)
+    if (valid2)
+    {
         sensor2Temp = t2;
+    }
 
-    if (t3 != -127.0f)
+    if (valid3)
+    {
         sensor3Temp = t3;
+    }
+
+    s_temp_valid =
+        valid1 || valid2 || valid3;
 
     /******************************************************
-                    DEBUG LOG
+                    DEBUG
     ******************************************************/
 
     ESP_LOGI(
         TAG,
-        "T1=%.2f  T2=%.2f  T3=%.2f",
+        "T1=%.2f T2=%.2f T3=%.2f",
         currentTemp,
         sensor2Temp,
         sensor3Temp
     );
+}
+
+/************************************************************
+                TEMPERATURE STATUS
+************************************************************/
+
+bool temperature_monitoring_is_valid(void)
+{
+    return s_temp_valid;
 }

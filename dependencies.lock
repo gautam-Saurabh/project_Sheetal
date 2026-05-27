@@ -20,6 +20,13 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.1.1
+  espressif/qrcode:
+    component_hash: 3b493771bc5d6ad30cbf87c25bf784aada8a08c941504355b55d6b75518ed7bc
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.1.0~2
   idf:
     source:
       type: idf
@@ -27,7 +34,8 @@ dependencies:
 direct_dependencies:
 - espressif/ds18b20
 - espressif/onewire_bus
+- espressif/qrcode
 - idf
-manifest_hash: be82654aa7a5843abfeb48ddcda21471fabae6d9ce716e0d8ffcb645cc5fa081
+manifest_hash: a340c9aa2052429f25e63ef4bcea317ff767f0419743ae06a04d7ac73b61eda3
 target: esp32
 version: 2.0.0

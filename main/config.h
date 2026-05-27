@@ -3,74 +3,130 @@
 
 // ================================================================
 // CONFIG.H
-// Central configuration file for TEC Cooling Jacket Firmware
+// TEC Cooling Jacket Firmware
 // ESP-IDF v5.3
 // ================================================================
 
 #include "driver/gpio.h"
 #include "esp_adc/adc_oneshot.h"
 
-// ======================= PIN DEFINITIONS =======================
+/************************************************************
+                    TEMPERATURE SENSOR PINS
+************************************************************/
 
-#define TEMP1_PIN       GPIO_NUM_4
-#define TEMP2_PIN       GPIO_NUM_16
-#define TEMP3_PIN       GPIO_NUM_19
+#define TEMP1_PIN                  GPIO_NUM_4
+#define TEMP2_PIN                  GPIO_NUM_16
+#define TEMP3_PIN                  GPIO_NUM_19
 
-#define FAN_PIN         GPIO_NUM_32
-#define TEC_PIN         GPIO_NUM_33
-#define PUMP_PIN        GPIO_NUM_25
+/************************************************************
+                        OUTPUT PINS
+************************************************************/
 
-#define SW1_PIN         GPIO_NUM_17
-#define SW4_PIN         GPIO_NUM_5
+#define FAN_PIN                    GPIO_NUM_32
+#define TEC_PIN                    GPIO_NUM_33
+#define PUMP_PIN                   GPIO_NUM_25
+
+/************************************************************
+                        BUTTON PINS
+************************************************************/
+
+#define SW1_PIN                    GPIO_NUM_5
+#define SW4_PIN                    GPIO_NUM_17
+
+#define BOOT_BUTTON_PIN            GPIO_NUM_0
+
+/************************************************************
+                        WIFI
+************************************************************/
+
+#define WIFI_LED_PIN               GPIO_NUM_2
+
+#define WIFI_PROV_TIMEOUT_SEC      60
+
+#define WIFI_LED_BLINK_MS          500UL
+
+/************************************************************
+                        OLED DISPLAY
+************************************************************/
+
+#define OLED_SDA                   GPIO_NUM_21
+#define OLED_SCL                   GPIO_NUM_22
+
+#define SCREEN_WIDTH               128
+#define SCREEN_HEIGHT              64
+
+#define OLED_I2C_ADDRESS           0x3C
+
+/************************************************************
+                        BATTERY ADC
+************************************************************/
 
 // GPIO36 = ADC1_CHANNEL_0
-#define BATTERY_ADC_CHANNEL ADC_CHANNEL_0
 
-#define OLED_SDA        GPIO_NUM_21
-#define OLED_SCL        GPIO_NUM_22
+#define BATTERY_ADC_CHANNEL        ADC_CHANNEL_0
 
-// ======================= OLED =======================
-
-#define SCREEN_WIDTH        128
-#define SCREEN_HEIGHT       64
-#define OLED_I2C_ADDRESS    0x3C
-
-// ======================= WIFI =======================
-
-#define WIFI_SSID       "Project_213"
-#define WIFI_PASSWORD   "da@2020@"
-
-// ======================= THINGSPEAK =======================
+/************************************************************
+                        THINGSPEAK
+************************************************************/
 
 #define THINGSPEAK_CHANNEL_ID      3254497UL
+
 #define THINGSPEAK_WRITE_API_KEY   "XPINKA2S866KH06D"
 
-// ======================= TEMPERATURE CONTROL =======================
+#define UPLOAD_INTERVAL_MS         15000UL
 
-#define DEFAULT_SET_TEMP    20
-#define HYSTERESIS          2.0f
+/************************************************************
+                    TEMPERATURE CONTROL
+************************************************************/
 
-// ======================= TIMING =======================
+#define DEFAULT_SET_TEMP           25
 
-#define UPLOAD_INTERVAL_MS      15000UL
-#define RECONNECT_INTERVAL_MS   60000UL
-#define BUTTON_DEBOUNCE_MS      200UL
+#define MIN_SET_TEMP               20
 
-// ======================= BATTERY MONITOR =======================
+#define MAX_SET_TEMP               30
 
-#define BAT_DIVIDER_RATIO       (1470.0f / 470.0f)
+#define HYSTERESIS                 2.0f
 
-#define BAT_MIN_VOLTAGE         6.0f
-#define BAT_MAX_VOLTAGE         8.4f
+#define TEMP_UPDATE_INTERVAL_MS    1000UL
 
-// ======================= ADC =======================
+/************************************************************
+                        BUTTONS
+************************************************************/
 
-#define ADC_ATTEN           ADC_ATTEN_DB_12
-#define ADC_WIDTH           ADC_BITWIDTH_12
+#define BUTTON_DEBOUNCE_MS         200UL
 
-// ======================= MISC =======================
+#define BUTTON_HOLD_SPEED_MS       120UL
 
-#define TASK_STACK_SIZE     4096
-#define TASK_PRIORITY       5
+/************************************************************
+                    BATTERY MONITOR
+************************************************************/
+
+// Voltage Divider:
+// R1 = 1M
+// R2 = 470K
+
+#define BAT_DIVIDER_RATIO          (1470.0f / 470.0f)
+
+// 2S Li-ion Battery
+
+#define BAT_MIN_VOLTAGE            6.0f
+
+#define BAT_MAX_VOLTAGE            8.4f
+
+/************************************************************
+                            ADC
+************************************************************/
+
+#define ADC_ATTEN                  ADC_ATTEN_DB_12
+
+#define ADC_WIDTH                  ADC_BITWIDTH_12
+
+/************************************************************
+                            TASKS
+************************************************************/
+
+#define TASK_STACK_SIZE            6144
+
+#define TASK_PRIORITY              5
 
 #endif // CONFIG_H
