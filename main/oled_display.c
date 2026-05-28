@@ -1,5 +1,5 @@
 #include "oled_display.h"
-#include "config.h"
+#include "config.h" // Pulls in SCREEN_WIDTH, OLED_SDA, OLED_SCL, etc.
 #include "tec_fan_controller.h"
 
 #include "freertos/FreeRTOS.h"
@@ -193,11 +193,12 @@ void oled_display_update(
         );
     }
 
+    // Swapped 128 for SCREEN_WIDTH
     u8g2_DrawHLine(
         &u8g2,
         0,
         12,
-        128
+        SCREEN_WIDTH
     );
 
     /************************************************
@@ -272,11 +273,12 @@ void oled_display_update(
                     COOLING
     ************************************************/
 
+    // Swapped 128 for SCREEN_WIDTH
     u8g2_DrawHLine(
         &u8g2,
         0,
         52,
-        128
+        SCREEN_WIDTH
     );
 
     u8g2_SetFont(
@@ -305,6 +307,7 @@ void oled_display_update(
 
     u8g2_SendBuffer(&u8g2);
 }
+
 /************************************************
                 OLED MESSAGE
 ************************************************/
@@ -333,16 +336,17 @@ void oled_show_message(
             line2
         );
 
+    // Swapped 128 for SCREEN_WIDTH to automatically center!
     u8g2_DrawStr(
         &u8g2,
-        (128 - w1) / 2,
+        (SCREEN_WIDTH - w1) / 2,
         28,
         line1
     );
 
     u8g2_DrawStr(
         &u8g2,
-        (128 - w2) / 2,
+        (SCREEN_WIDTH - w2) / 2,
         48,
         line2
     );
