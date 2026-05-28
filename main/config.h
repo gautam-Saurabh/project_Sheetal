@@ -74,6 +74,23 @@
 #define OLED_I2C_ADDRESS           0x3C
 
 /************************************************************
+                        HARDWARE ERROR CODES
+************************************************************/
+
+// 1 = Show full-screen error if hardware fails, 0 = Ignore errors
+#define ENABLE_HARDWARE_ALERTS     0 
+
+/* ==========================================================
+    OFFICIAL ERROR MANUAL
+    E00 - System Memory Fault (setTemp corrupted)
+    E01 - Main Sensor (T1) Lost (Check GPIO 4)
+    E02 - Sensor 2 (T2) Lost (Check GPIO 16)
+    E03 - Sensor 3 (T3) Lost (Check GPIO 19)
+    E04 - Wi-Fi Network Lost (Cannot find router)
+    E05 - ThingSpeak / Cloud API Timeout
+========================================================== */
+
+/************************************************************
                         BATTERY ADC
 ************************************************************/
 
@@ -99,7 +116,7 @@
 
 #define MIN_SET_TEMP               15
 
-#define MAX_SET_TEMP               30
+#define MAX_SET_TEMP               35
 
 #define HYSTERESIS                 2.0f
 
@@ -111,7 +128,7 @@
 
 #define BUTTON_DEBOUNCE_MS         200UL
 
-#define BUTTON_HOLD_SPEED_MS       120UL
+#define BUTTON_HOLD_SPEED_MS       75UL
 
 /************************************************************
                     BATTERY MONITOR & CALIBRATION

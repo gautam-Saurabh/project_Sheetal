@@ -1,10 +1,13 @@
 #include "battery_monitor.h"
 #include "config.h" 
 #include "tec_fan_controller.h" // Needed to check TEC status for Load Compensation
-#include "driver/adc.h"
+#include "esp_adc/adc_oneshot.h" // MODERN ESP-IDF v5 API!
 #include "esp_log.h"
 
 static const char *TAG = "BATTERY";
+
+// Modern ADC Handle
+static adc_oneshot_unit_handle_t adc1_handle;
 
 // ==========================================
 // CALIBRATION CONSTANTS
@@ -18,17 +21,28 @@ static const char *TAG = "BATTERY";
 
 void battery_monitor_init(void)
 {
-    // Initialize your specific ADC channel here based on your hardware layout
-    adc1_config_width(ADC_WIDTH_BIT_12); // Assuming standard 12-bit
-    adc1_config_channel_atten(BATTERY_ADC_CHANNEL, ADC_ATTEN_DB_11); 
+    // 1. Initialize the ADC Unit
+    adc_oneshot_unit_init_cfg_t init_config = {
+        .unit_id = ADC_UNIT_1, // Battery is on ADC1
+    };
+    adc_oneshot_new_unit(&init_config, &adc1_handle);
+
+    // 2. Configure the specific channel (Using the modern ADC_ATTEN_DB_12)
+    adc_oneshot_chan_cfg_t config = {
+        .bitwidth = ADC_BITWIDTH_12,
+        .atten = ADC_ATTEN_DB_12,
+    };
+    adc_oneshot_config_channel(adc1_handle, BATTERY_ADC_CHANNEL, &config);
     
-    ESP_LOGI(TAG, "Battery monitor initialized with Load Compensation & Dynamic Curve");
+    ESP_LOGI(TAG, "Battery monitor initialized (ESP-IDF v5 API)");
 }
 
 float battery_monitor_get_percent(void)
 {
-    // 1. Read Raw ADC
-    int raw = adc1_get_raw(BATTERY_ADC_CHANNEL);
+    // 1. Read Raw ADC using the modern API
+    int raw = 0;
+    adc_oneshot_read(adc1_handle, BATTERY_ADC_CHANNEL, &raw);
+    
     float opamp_voltage = ((float)raw / 4095.0f) * 3.3f;
     
     // 2. APPLY LOAD COMPENSATION (The Engineer's Fix)
