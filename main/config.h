@@ -13,6 +13,11 @@
 // 1 = Test OLED/WiFi with fake data (No sensors needed), 0 = Real Hardware Mode
 #define SIMULATION_MODE            0
 
+// ================================================================
+// CLOUD BACKEND SELECTION (1 = Anedya MQTT, 0 = ThingSpeak HTTP)
+// ================================================================
+#define USE_ANEDYA                 1 
+
 /************************************************************
                         PUMP CONFIGURATION
 ************************************************************/
@@ -99,12 +104,17 @@
 #define BATTERY_ADC_CHANNEL        ADC_CHANNEL_0
 
 /************************************************************
-                        THINGSPEAK
+                    CLOUD CONFIGURATIONS
 ************************************************************/
-
-#define THINGSPEAK_CHANNEL_ID      3254497UL
-
-#define THINGSPEAK_WRITE_API_KEY   "XPINKA2S866KH06D"
+#if USE_ANEDYA
+    #define ANEDYA_DEVICE_ID        "019e7289-75ae-7192-ae26-2b9a04a9525f"
+    #define ANEDYA_CONNECTION_KEY   "84db0fa8e8933466b08f9aadc684305b"
+    #define ANEDYA_REGION           "ap-in-1"
+    #define ANEDYA_MQTT_URI         "mqtts://mqtt.ap-in-1.anedya.io:8883"
+#else
+    #define THINGSPEAK_CHANNEL_ID      3254497UL
+    #define THINGSPEAK_WRITE_API_KEY   "XPINKA2S866KH06D"
+#endif
 
 #define UPLOAD_INTERVAL_MS         15000UL
 

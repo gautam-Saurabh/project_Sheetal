@@ -7,7 +7,7 @@
 #include "pumpcontroller.h"
 #include "button_handler.h"
 #include "battery_monitor.h"
-#include "thingspeakhandler.h"
+#include "cloud_handler.h" // UPDATED: Now using the universal Cloud Shifter
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -48,7 +48,9 @@ void app_main(void)
     temperature_monitoring_init();
     tec_fan_controller_init();
     pump_controller_init();
-    thingspeak_handler_init();
+    
+    // UPDATED: Initialize the active cloud based on config.h
+    cloud_handler_init(); 
 
     // Fun Startup Animation
     for (int i = 0; i < 3; i++) {
@@ -62,6 +64,9 @@ void app_main(void)
     
     wifi_manager_init();
     ESP_LOGW(TAG, "Wi-Fi Init Complete! Entering Main Loop.");
+
+    // UPDATED: Initialize the active cloud based on config.h
+    cloud_handler_init(); 
 
     // Variables for Factory Reset tracking
     uint32_t boot_press_start_time = 0;
@@ -102,7 +107,7 @@ void app_main(void)
         float battery_percent = battery_monitor_get_percent();
         bool wifi_connected = wifi_manager_is_connected();
 
-/******************************************************
+        /******************************************************
                     USER INTERFACE & ERROR MANAGER
         ******************************************************/
         if (!wifi_manager_is_provisioning() && !is_boot_pressed && !wifi_manager_is_factory_resetting()) {
@@ -139,12 +144,6 @@ void app_main(void)
                 active_errors[error_count++] = 4;
             }
 
-            // E05: Cloud API / ThingSpeak Timeout
-            // (Requires a flag from thingspeakhandler.c to activate fully)
-            // if (thingspeak_upload_failed) {
-            //     active_errors[error_count++] = 5;
-            // }
-
             // 2. ALERT DISPLAY (The Queue Manager)
             if (error_count > 0) {
                 
@@ -177,7 +176,8 @@ void app_main(void)
         /******************************************************
                     CLOUD SYNC
         ******************************************************/
-        thingspeak_handler_update();
+        // UPDATED: Let the universal handler decide where to send the data
+        cloud_handler_update();
 
         // Print system status to the terminal
         ESP_LOGW(TAG, "Temp=%.2f Set=%d Battery=%.1f%% WiFi=%s", 

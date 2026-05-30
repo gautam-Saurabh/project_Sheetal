@@ -7,7 +7,7 @@ idf_component_register(
         "temperaturemonitoring.c"
         "tec_fan_controller.c"
         "pumpcontroller.c"
-        "thingspeakhandler.c"
+        "cloud_handler.c"          # UPDATED: Replaced thingspeakhandler.c
         "oled_display.c"
         "battery_monitor.c"
         "button_handler.c"
@@ -39,8 +39,7 @@ idf_component_register(
         "."
         "../components/u8g2/csrc"
 
-    REQUIRES
-
+ REQUIRES
         driver
         esp_wifi
         esp_event
@@ -52,6 +51,9 @@ idf_component_register(
         wifi_provisioning
         onewire_bus
         ds18b20
+        mqtt               
+        json               # FIX: Changed from 'cJSON' to 'json'
+
 )
 
 target_compile_options(${COMPONENT_LIB} PRIVATE -Os)
