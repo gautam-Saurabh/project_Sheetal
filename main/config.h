@@ -11,7 +11,7 @@
 #include "esp_adc/adc_oneshot.h"
 
 // 1 = Test OLED/WiFi with fake data (No sensors needed), 0 = Real Hardware Mode
-#define SIMULATION_MODE            0
+#define SIMULATION_MODE            1
 
 // ================================================================
 // CLOUD BACKEND SELECTION (1 = Anedya MQTT, 0 = ThingSpeak HTTP)

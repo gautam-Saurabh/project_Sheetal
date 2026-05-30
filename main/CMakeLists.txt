@@ -52,8 +52,12 @@ idf_component_register(
         onewire_bus
         ds18b20
         mqtt               
-        json               # FIX: Changed from 'cJSON' to 'json'
+        json               
 
+    # ==========================================
+    # NEW: BAKE THE ECC CERTIFICATE INTO MEMORY
+    # ==========================================
+    EMBED_TXTFILES "certs/anedyaeca3.crt"
 )
 
 target_compile_options(${COMPONENT_LIB} PRIVATE -Os)
