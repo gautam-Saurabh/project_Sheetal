@@ -15,6 +15,10 @@ void pump_controller_init(void);
 
 void pump_controller_update(void);
 
+// --- NEW: CLOUD OVERRIDE FUNCTION ---
+// state: 1 (Force ON), 0 (Force OFF), -1 (Return to Auto)
+void pump_controller_set_override(int state); 
+
 /************************************************************
                     PUMP STATUS
 ************************************************************/

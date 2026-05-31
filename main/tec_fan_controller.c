@@ -1,14 +1,15 @@
 #include "tec_fan_controller.h"
 #include "button_handler.h"
-#include "config.h" // Pulls in HYSTERESIS, TEC_PIN, and FAN_PIN!
+#include "config.h" // Pulls in HYSTERESIS, TEC_PIN, FAN_PIN, and OVERRIDE states!
 
 #include "driver/gpio.h"
 #include "esp_log.h"
 
 static const char *TAG = "TEC_FAN";
 
-// Cooling state
+// Cooling state & Override state
 static bool cooling_state = false;
+static int cloud_override_state = OVERRIDE_AUTO; // Default to automatic mode (-1)
 
 /************************************************************
                         INIT
@@ -41,27 +42,33 @@ void tec_fan_controller_init(void)
 
 void tec_fan_controller_update(float current_temp)
 {
-    /************************************************
-            TURN ON COOLING
+    /******************************************************
+            1. CHECK CLOUD OVERRIDE FIRST
+    ******************************************************/
+    if (cloud_override_state == OVERRIDE_ON) {
+        cooling_state = true;
+        gpio_set_level(TEC_PIN, 1);
+        gpio_set_level(FAN_PIN, 1);
+        return; // Exit early! Ignore the temperature sensors entirely.
+    } 
+    else if (cloud_override_state == OVERRIDE_OFF) {
+        cooling_state = false;
+        gpio_set_level(TEC_PIN, 0);
+        gpio_set_level(FAN_PIN, 0);
+        return; // Exit early! Ignore the temperature sensors entirely.
+    }
 
-        Example with HYSTERESIS of 2.0:
-        SET = 25
-        ON at 26 (25 + 1.0)
-    ************************************************/
+    /******************************************************
+            2. AUTOMATIC HYSTERESIS MODE
+    ******************************************************/
     
+    // TURN ON COOLING (e.g., SET=25, ON at 26)
     if (current_temp >= (setTemp + (HYSTERESIS / 2.0f)))
     {
         cooling_state = true;
     }
 
-    /************************************************
-            TURN OFF COOLING
-
-        Example with HYSTERESIS of 2.0:
-        SET = 25
-        OFF at 24 (25 - 1.0)
-    ************************************************/
-    
+    // TURN OFF COOLING (e.g., SET=25, OFF at 24)
     if (current_temp <= (setTemp - (HYSTERESIS / 2.0f)))
     {
         cooling_state = false;
@@ -74,8 +81,8 @@ void tec_fan_controller_update(float current_temp)
     gpio_set_level(TEC_PIN, cooling_state);
     gpio_set_level(FAN_PIN, cooling_state);
 
-    // Note: Since this runs in your main while(1) loop every 100ms, 
-    // it will print to the serial monitor very fast!
+    // Limit log spam by only logging on state change or occasionally if needed,
+    // but leaving your original log here for debugging.
     ESP_LOGI(
         TAG,
         "Temp=%.1f Set=%d Cooling=%s",
@@ -83,6 +90,16 @@ void tec_fan_controller_update(float current_temp)
         setTemp,
         cooling_state ? "ON" : "OFF"
     );
+}
+
+/************************************************************
+                CLOUD OVERRIDE CONTROL
+************************************************************/
+
+void tec_fan_controller_set_override(int state)
+{
+    cloud_override_state = state;
+    ESP_LOGI(TAG, "Cloud Override State Changed to: %d", state);
 }
 
 /************************************************************

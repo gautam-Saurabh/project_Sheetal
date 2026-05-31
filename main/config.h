@@ -11,7 +11,7 @@
 #include "esp_adc/adc_oneshot.h"
 
 // 1 = Test OLED/WiFi with fake data (No sensors needed), 0 = Real Hardware Mode
-#define SIMULATION_MODE            1
+#define SIMULATION_MODE            0
 
 // ================================================================
 // CLOUD BACKEND SELECTION (1 = Anedya MQTT, 0 = ThingSpeak HTTP)
@@ -107,8 +107,8 @@
                     CLOUD CONFIGURATIONS
 ************************************************************/
 #if USE_ANEDYA
-    #define ANEDYA_DEVICE_ID        "019e7289-75ae-7192-ae26-2b9a04a9525f"
-    #define ANEDYA_CONNECTION_KEY   "84db0fa8e8933466b08f9aadc684305b"
+    #define ANEDYA_DEVICE_ID        "7fb2822b-af79-468e-af66-4a93bbc381f4"
+    #define ANEDYA_CONNECTION_KEY   "c93c95443980ad7483782e6c1ad46653"
     #define ANEDYA_REGION           "ap-in-1"
     #define ANEDYA_MQTT_URI         "mqtts://mqtt.ap-in-1.anedya.io:8883"
 #else
@@ -117,6 +117,13 @@
 #endif
 
 #define UPLOAD_INTERVAL_MS         15000UL
+/************************************************************
+                    CLOUD OVERRIDE STATES
+************************************************************/
+// Used by pump and TEC controllers for manual cloud control
+#define OVERRIDE_AUTO  -1
+#define OVERRIDE_OFF    0
+#define OVERRIDE_ON     1
 
 /************************************************************
                     TEMPERATURE CONTROL

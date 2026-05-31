@@ -15,6 +15,10 @@ void tec_fan_controller_init(void);
 
 void tec_fan_controller_update(float current_temp);
 
+// --- NEW: CLOUD OVERRIDE FUNCTION ---
+// state: 1 (Force ON), 0 (Force OFF), -1 (Return to Auto)
+void tec_fan_controller_set_override(int state); 
+
 /************************************************************
                 COOLING STATUS
 ************************************************************/
